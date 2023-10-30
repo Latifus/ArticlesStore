@@ -49,21 +49,53 @@
     
         
       <main class="px-3">
-        <h1>Home page.</h1>
-        <p class="lead">Cover is a one-page template for building simple and beautiful home pages. Download, edit the text, and add your own fullscreen background photo to make it your own.</p>
+        <h1>global feed</h1>
+        <p class="lead">Here you can find all Items<p>
 
-        {{ range . }}
-         <div class="alert alert-danger">
-            <h2>{{ .Title }}</h2>
-            <p>{{ .Anons }}</p>
-            <p>{{ .Text }}</p>
-            <a href="/post/{{ .ID }}" class="btn btn-danger">More info</a>
-         </div> 
+      {{ range . }}
+      <section class="p-4 p-md-5 text-center text-lg-start shadow-1-strong rounded" style="background-image: url(https://mdbcdn.b-cdn.net/img/Photos/Others/background2.webp);">
+        <div class="row d-flex justify-content-center">
+          <div class="col-md-10">
+            <div class="card">
+              <div class="card-body m-3">
+                <div class="row">
+                  <div class="col-lg-4 d-flex justify-content-center align-items-center mb-4 mb-lg-0">
+                    <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/img%20%2810%29.webp" class="rounded-circle img-fluid shadow-1" alt="woman avatar" width="200" height="200" />
+              </div>
+              <div class="col-lg-8">
+                      <p class="text-muted fw-light mb-4">
+                       Lorem ipsum dolor, sit amet consectetur adipisicing elit. Id quam sapiente
+                       molestiae numquam quas, voluptates omnis nulla ea odio quia similique
+                       corrupti magnam.
+                      </p>
+                      <p class="fw-bold lead mb-2"><strong>Anna Smith</strong></p>
+                      <p class="fw-bold text-muted mb-0">Product manager</p>
+                    </div>
+                  </div>
+                </div>
+             </div>
+           </div>
+        </div>
+     </section>
 
+
+
+        <!-- <div class="alert alert-danger">
+          <h2>{{ .Title }}</h2>
+          <p class="author-name">{{ .AuthorName }}</p>
+          <p class="creation-date">{{ .CreationDate }}</p>
+          <p class="description">{{ .Description }}</p>
+          <p>Likes: {{ .Likes }}</p>
+          <ul class="tag-list">
+              <li class="tag-default tag-pill tag-outline ng-binding ng-scope" ng-repeat="tag in ::$ctrl.article.tagList">tag</li>
+          </ul>
+          <a href="/post/{{ .ID }}" class="btn btn-danger">More info</a>
+      </div> -->
 
         {{ else }}
         <p class="lead">No arcticles</p>
         {{ end }}
+
         <p class="lead">
           <a href="#" class="btn btn-lg btn-light fw-bold border-white bg-white">Learn more</a>
         </p>
