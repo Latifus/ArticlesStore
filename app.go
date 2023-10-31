@@ -25,6 +25,9 @@ type User struct {
 	Email    string
 	Password string
 }
+type Exception struct {
+	Message string
+}
 var items = []Item{}
 
 func formatDate(date string) string {
@@ -38,7 +41,7 @@ func formatDate(date string) string {
 func getHomePage(w http.ResponseWriter, r *http.Request) {
 	temp, err := template.ParseFiles("front/home.html", "front/header.html", "front/footer.html")
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		panic(err)
 	}
 
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
@@ -72,7 +75,7 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 func getAddItemPage(w http.ResponseWriter, r *http.Request) {
 	temp, err := template.ParseFiles("front/add.html", "front/header.html", "front/footer.html")
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		panic(err)
 	}
 
 	temp.ExecuteTemplate(w, "create", nil)
@@ -101,23 +104,23 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkCriteria(criteria string) bool {
-	return criteria != "";
+	return criteria != ""
 }
 
 func getRegisterPage(w http.ResponseWriter, r *http.Request) {
-	temp, err := template.ParseFiles("front/register.html", "front/footer.html")
+	temp, err := template.ParseFiles("front/login.html", "front/footer.html", "front/headerForAuth.html",)
 	if err != nil {
 		panic(err)
 	}
 
 	temp.ExecuteTemplate(w, "register", nil)
-}	
+}
 
-func register(w http.ResponseWriter, r *http.Request)  {
+func register(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-	
+
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
 	if errr != nil {
 		panic(errr)
@@ -135,26 +138,52 @@ func register(w http.ResponseWriter, r *http.Request)  {
 	}
 }
 
-func login(w http.ResponseWriter, r *http.Request)  {
-	temp, err := template.ParseFiles("front/login.html", "front/footer.html")
+func login(w http.ResponseWriter, r *http.Request) {
+	temp, err := template.ParseFiles("front/login.html", "front/footer.html", "front/headerForAuth.html",)
 	if err != nil {
 		panic(err)
 	}
 
-	temp.ExecuteTemplate(w, "login", nil)
-	
+	email := r.FormValue("email")
+	password := r.FormValue("password")
 
-	// email := r.FormValue("email")
-	// password := r.FormValue("password")
-	
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
 	if errr != nil {
 		panic(errr)
 	}
 	defer db.Close()
 
-}
+	res, err := db.Query("SELECT `email`, `password` FROM `users`")
+	if err != nil {
+		panic(errr)
+	}
 
+	if checkCriteria(email) && checkCriteria(password) {
+
+		found := false
+		for res.Next() {
+			var user User
+			err = res.Scan(&user.Email, &user.Password)
+			if err != nil {
+				panic(err)
+			}
+
+			if user.Email == email && user.Password == password {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+	}else {
+		errorMessage := "username or password must not be empty!"
+		ex := Exception{Message: errorMessage}
+		temp.ExecuteTemplate(w, "login", ex)
+	}
+}
 
 func main() {
 	rtr := mux.NewRouter()
@@ -166,7 +195,6 @@ func main() {
 	rtr.HandleFunc("/register", getRegisterPage).Methods("GET")
 	rtr.HandleFunc("/save_user", register).Methods("POST")
 	rtr.HandleFunc("/login", login).Methods("GET")
-
 
 	http.ListenAndServe(":8181", nil)
 }
