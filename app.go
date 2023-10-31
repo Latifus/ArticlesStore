@@ -19,14 +19,12 @@ type Item struct {
 	Title        string
 	Description  string
 }
-
 type User struct {
 	ID       uint16
 	Username string
 	Email    string
 	Password string
 }
-
 var items = []Item{}
 
 func formatDate(date string) string {
@@ -50,7 +48,7 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	res, error := db.Query("SELECT * FROM `items`")
+	res, error := db.Query("SELECT * FROM `items` ORDER BY `creationDate` DESC;")
 	if error != nil {
 		panic(error)
 	}
@@ -71,7 +69,7 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 	temp.ExecuteTemplate(w, "index", items)
 }
 
-func addItem(w http.ResponseWriter, r *http.Request) {
+func getAddItemPage(w http.ResponseWriter, r *http.Request) {
 	temp, err := template.ParseFiles("front/add.html", "front/header.html", "front/footer.html")
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
@@ -80,7 +78,7 @@ func addItem(w http.ResponseWriter, r *http.Request) {
 	temp.ExecuteTemplate(w, "create", nil)
 }
 
-func save(w http.ResponseWriter, r *http.Request) {
+func saveItem(w http.ResponseWriter, r *http.Request) {
 
 	author := r.FormValue("author")
 	title := r.FormValue("title")
@@ -106,24 +104,25 @@ func checkCriteria(criteria string) bool {
 	return criteria != "";
 }
 
-func register(w http.ResponseWriter, r *http.Request) {
-
-	username := r.FormValue("username")
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
+func getRegisterPage(w http.ResponseWriter, r *http.Request) {
 	temp, err := template.ParseFiles("front/register.html", "front/footer.html")
 	if err != nil {
 		panic(err)
 	}
 
+	temp.ExecuteTemplate(w, "register", nil)
+}	
+
+func register(w http.ResponseWriter, r *http.Request)  {
+	username := r.FormValue("username")
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+	
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
 	if errr != nil {
 		panic(errr)
 	}
 	defer db.Close()
-
-	temp.ExecuteTemplate(w, "register", nil)
 
 	if checkCriteria(username) && checkCriteria(email) && checkCriteria(password) {
 		insert, error := db.Query(fmt.Sprintf("INSERT INTO `users` (`username`, `email`, `password`) VALUES('%s', '%s',  '%s')", username, email, password))
@@ -134,17 +133,40 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
+}
 
-}	
+func login(w http.ResponseWriter, r *http.Request)  {
+	temp, err := template.ParseFiles("front/login.html", "front/footer.html")
+	if err != nil {
+		panic(err)
+	}
+
+	temp.ExecuteTemplate(w, "login", nil)
+	
+
+	// email := r.FormValue("email")
+	// password := r.FormValue("password")
+	
+	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
+	if errr != nil {
+		panic(errr)
+	}
+	defer db.Close()
+
+}
+
 
 func main() {
 	rtr := mux.NewRouter()
 	http.Handle("/", rtr)
 
 	rtr.HandleFunc("/", getHomePage).Methods("GET")
-	rtr.HandleFunc("/add", addItem).Methods("GET")
-	rtr.HandleFunc("/save_article", save).Methods("POST")
-	rtr.HandleFunc("/register", register).Methods("GET")
+	rtr.HandleFunc("/add", getAddItemPage).Methods("GET")
+	rtr.HandleFunc("/save_article", saveItem).Methods("POST")
+	rtr.HandleFunc("/register", getRegisterPage).Methods("GET")
+	rtr.HandleFunc("/save_user", register).Methods("POST")
+	rtr.HandleFunc("/login", login).Methods("GET")
+
 
 	http.ListenAndServe(":8181", nil)
 }
