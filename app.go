@@ -108,7 +108,7 @@ func checkCriteria(criteria string) bool {
 }
 
 func getRegisterPage(w http.ResponseWriter, r *http.Request) {
-	temp, err := template.ParseFiles("front/login.html", "front/footer.html", "front/headerForAuth.html",)
+	temp, err := template.ParseFiles("front/register.html", "front/footer.html", "front/headerForAuth.html",)
 	if err != nil {
 		panic(err)
 	}
