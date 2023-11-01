@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
@@ -24,11 +25,32 @@ type User struct {
 	Username string
 	Email    string
 	Password string
+	Token string
 }
 type Exception struct {
 	Message string
 }
-var items = []Item{}
+
+func (u User) setToken(token string)  {
+	u.Token = token
+}
+
+var secretKey string = "ZrStAfUuqTM6eTuhacT9JCfUQp9QkHnZ"
+
+func generateToken(userID int) string {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+	claims["user_id"] = userID
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // Время жизни токена, например, 24 часа
+
+	tokenString, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		panic(err)
+	}
+
+	return tokenString
+}
 
 func formatDate(date string) string {
 	t, err := time.Parse("2006-01-02 15:04:05", date)
@@ -38,10 +60,42 @@ func formatDate(date string) string {
 	return t.Format("2006 January 02")
 }
 
+func checkToken(tokenString string) (jwt.MapClaims, error) {
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        // Проверка метода подписи
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("Invalid token signing method")
+        }
+        return []byte(secretKey), nil
+    })
+    if err != nil {
+        return nil, err
+    }
+
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        return claims, nil
+    }
+
+    return nil, fmt.Errorf("Invalid token")
+}
+
+func CheckAuthentication(r *http.Request) bool {
+	return true;
+}
+
 func getHomePage(w http.ResponseWriter, r *http.Request) {
-	temp, err := template.ParseFiles("front/home.html", "front/header.html", "front/footer.html")
+	isAuthenticated := CheckAuthentication(r)
+
+	temp, err := template.ParseFiles("front/home.html", "front/header.html", "front/headerIfNonAuthorize.html", "front/footer.html")
 	if err != nil {
 		panic(err)
+	}
+
+	data := struct {
+		IsAuthenticated bool
+		Items           []Item
+	}{
+		IsAuthenticated: isAuthenticated,
 	}
 
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
@@ -56,7 +110,8 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 		panic(error)
 	}
 
-	items = []Item{}
+	data.Items = []Item{}
+
 	for res.Next() {
 		var item Item
 		error = res.Scan(&item.ID, &item.AuthorName, &item.CreationDate, &item.Likes, &item.Title, &item.Description)
@@ -66,10 +121,10 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 
 		item.CreationDate = formatDate(item.CreationDate)
 
-		items = append(items, item)
+		data.Items = append(data.Items, item)
 	}
 
-	temp.ExecuteTemplate(w, "index", items)
+	temp.ExecuteTemplate(w, "index", data)
 }
 
 func getAddItemPage(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +155,7 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer insert.Close()
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func checkCriteria(criteria string) bool {
@@ -108,7 +163,7 @@ func checkCriteria(criteria string) bool {
 }
 
 func getRegisterPage(w http.ResponseWriter, r *http.Request) {
-	temp, err := template.ParseFiles("front/register.html", "front/footer.html", "front/headerForAuth.html",)
+	temp, err := template.ParseFiles("front/register.html", "front/footer.html", "front/headerForAuth.html")
 	if err != nil {
 		panic(err)
 	}
@@ -133,13 +188,12 @@ func register(w http.ResponseWriter, r *http.Request) {
 			panic(error)
 		}
 		defer insert.Close()
-
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	temp, err := template.ParseFiles("front/login.html", "front/footer.html", "front/headerForAuth.html",)
+	temp, err := template.ParseFiles("front/login.html", "front/footer.html", "front/headerForAuth.html")
 	if err != nil {
 		panic(err)
 	}
@@ -170,6 +224,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 			if user.Email == email && user.Password == password {
 				found = true
+				user.setToken(generateToken(int(user.ID)))
 				break
 			}
 		}
@@ -178,7 +233,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-	}else {
+	} else {
 		errorMessage := "username or password must not be empty!"
 		ex := Exception{Message: errorMessage}
 		temp.ExecuteTemplate(w, "login", ex)
