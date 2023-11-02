@@ -43,6 +43,11 @@ type ItemWithUsername struct {
 type Exception struct {
 	Message string
 }
+type ItemWithTags struct {
+	ID int
+	Tagsname string
+}
+
 var secretKey string = "ZrStAfUuqTM6eTuhacT9JCfUQp9QkHnZ"
 
 func (u *User) setToken(token string) {
@@ -153,20 +158,18 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 		panic(error)
 	}
 
-	data.Items = []ItemWithUsername{}
-
 	for res.Next() {
 		var item ItemWithUsername
-		error = res.Scan(&item.ID, &item.CreationDate, &item.Likes, &item.Title, &item.Description, &item.Username)
-		if error != nil {
-			panic(error)
+		err = res.Scan(&item.ID, &item.CreationDate, &item.Likes, &item.Title, &item.Description, &item.Username)
+		if err != nil {
+			panic(err)
 		}
 		item.Description = cutDescription(item.Description)
 		item.CreationDate = formatDate(item.CreationDate)
-
+	
 		data.Items = append(data.Items, item)
 	}
-
+	
 	tag, fail := db.Query("SELECT * FROM `tags`;")
 	if fail != nil {
 		panic(fail)
@@ -180,8 +183,8 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 			panic(fail)
 		}
 		data.Tags = append(data.Tags, t)
-
 	}
+
 	temp.ExecuteTemplate(w, "index", data)
 }
 
@@ -215,15 +218,47 @@ func getAddItemPage(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	temp.ExecuteTemplate(w, "create", nil)
+	db, err := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	tag, fail := db.Query("SELECT * FROM `tags`;")
+	if fail != nil {
+		panic(fail)
+	}
+
+	tags := []Tag{}
+	for tag.Next() {
+		var t Tag
+		fail = tag.Scan(&t.ID, &t.Tagname, &t.Item_id)
+		if fail != nil {
+			panic(fail)
+		}
+		tags = append(tags, t)
+	}
+
+	temp.ExecuteTemplate(w, "create", tags)
 }
 
 func saveItem(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		panic(err)
+	}
 
-	author := r.FormValue("author")
+	userID:= verifyToken(token.Value)
+
 	title := r.FormValue("title")
 	desc := r.FormValue("desc")
 	date := time.Now().Format("2006-01-02 15:04:05")
+	tags := r.Form["tags"]
+
+	fmt.Print("addded tags: ")
+	fmt.Print(tags)
+	fmt.Println()
+	fmt.Println(title + " : " + desc+ " : " +  date)
 
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
 	if errr != nil {
@@ -231,14 +266,30 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	insert, error := db.Query(fmt.Sprintf("INSERT INTO `items` (`authorName`, `creationDate`, `likes`, `title`, `description`) VALUES('%s', '%s', '%d', '%s', '%s')", author, date, 0, title, desc))
+	insert, error := db.Exec(fmt.Sprintf("INSERT INTO `items` (`creationDate`, `likes`, `title`, `description`, `user_id`) VALUES('%s', '%d', '%s', '%s', '%d')", date, 0, title, desc, userID))
 	if error != nil {
 		panic(error)
 	}
-	defer insert.Close()
 
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	itemID, err := insert.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, v := range tags {
+		fmt.Println("elemtn: " + v)
+
+		_, fail := db.Query(fmt.Sprintf("INSERT INTO `tags` (`tag_name`, `item_id`) VALUES('%s', '%d')", v, itemID))
+		if fail != nil {
+			panic(fail)
+		}
+
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+
 
 func checkCriteria(criteria string) bool {
 	return criteria != ""
@@ -397,7 +448,7 @@ func main() {
 	rtr.HandleFunc("/add", getAddItemPage).Methods("GET")
 	rtr.HandleFunc("/save_article", saveItem).Methods("POST")
 	rtr.HandleFunc("/register", getRegisterPage).Methods("GET")
-	rtr.HandleFunc("/", register).Methods("POST")
+	rtr.HandleFunc("/save_user", register).Methods("POST")
 	rtr.HandleFunc("/login", login).Methods("GET")
 	rtr.HandleFunc("/user", checkUserPage).Methods("GET")
 	rtr.HandleFunc("/update-likes", updateLikes).Methods("POST")

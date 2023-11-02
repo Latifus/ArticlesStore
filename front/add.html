@@ -51,12 +51,19 @@
       <main role="main" class="inner cover">
         <h1 class="inner cover">Add item</h1>
         <form action="/save_article" method="post">
-            <input type="text" name="author" id="author" placeholder="Enter author`s name:"
-            class="form-control"><br>
             <input type="text" name="title" id="title" placeholder="Enter title:"
             class="form-control"><br>
             <textarea name="desc" id="desc" placeholder="Enter description:"
             class="form-control"></textarea><br>
+
+        
+            <label for="tags">Select tags:</label>
+            <select name="tags" id="tags" class="form-control" multiple>
+              {{ range . }}
+              <option value="{{ .Tagname }}" >{{ .Tagname }}</option>
+              {{ end  }}
+            </select><br>
+            
             <button class="btn btn-warning">Add</button>
         </form>
       </main>

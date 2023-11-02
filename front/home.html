@@ -75,37 +75,10 @@ body {
   text-decoration: underline;
 }
 
-.colorful-button {
-  background-color: #007bff; /* Initial button background color */
-  color: #fff; /* Text color */
-  padding: 10px 20px; /* Adjust padding as needed */
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s; /* Add a smooth transition effect */
-  animation: colorChange 3s infinite alternate; 
-
+.button-container{
+  display: flex;
+  justify-content: flex-end;
 }
-
-/* Hover effect */
-.colorful-button:hover {
-  background-color: #ff6347; /* New background color on hover */
-}
-
-/* Keyframes for animation (Optional) */
-@keyframes colorChange {
-  0% {
-    background-color: #007bff;
-  }
-  50% {
-    background-color: #ff6347;
-  }
-  100% {
-    background-color: #007bff;
-  }
-}
-
-
 
     </style>
 
@@ -157,8 +130,8 @@ body {
 
       <main class="px-3">
         <h1>global feed</h1>
-        <p class="lead">Here you can find all Items<p>
-  
+        <p class="lead">Here you can find all Items</p>
+
           <div id="tags" class="tags-block mt-4 p-3 rounded bg-white"> 
             <p style="color: #333;">Popular tags</p>
              {{ range .Tags }}
@@ -166,11 +139,8 @@ body {
 
              {{ end }}
           </div>
-  
-<!-- 
-            number of likes
 
-            list of tags
+            <!-- list of tags
 
             and a link to read the full article  -->
 
@@ -192,12 +162,10 @@ body {
                       <p class="date ng-binding" style="font-size: 14px; color: #666262">{{ .CreationDate }}</p>
                       <h2 class="fw-bold text-muted mb-0">{{ .Title}}</h2>             
                       <p class="fw-bold text-muted mb-0"> {{ .Description }}</p>
-
                       <div class="button-container">
                         <button id="likeButton" class="btn btn-sm btn-outline-primary likeButton" data-item-id="{{ .ID }}" data-likes="{{ .Likes }}"> 
                            <i class="ion-heart"></i> <ng-transclude><span class="ng-binding ng-scope">{{ .Likes }}</span></ng-transclude> </button>
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -216,23 +184,22 @@ body {
 
         <script>
        document.addEventListener('DOMContentLoaded', function() {
-  var likeButtons = document.querySelectorAll('.likeButton');
+       var likeButtons = document.querySelectorAll('.likeButton');
   
-  likeButtons.forEach(function(likeButton) {
-    var itemID = likeButton.getAttribute('data-item-id');
+      likeButtons.forEach(function(likeButton) {
+      var itemID = likeButton.getAttribute('data-item-id');
     
-    // Проверяем, поставил ли пользователь уже лайк для этой записи
-    var likedItems = JSON.parse(localStorage.getItem('likedItems')) || {};
-    if (likedItems[itemID]) {
-      // Если пользователь уже поставил лайк, применяем стиль
-      likeButton.classList.add('liked');
-    }
-    
-    likeButton.addEventListener('click', function() {
+      // Проверяем, поставил ли пользователь уже лайк для этой записи
+      var likedItems = JSON.parse(localStorage.getItem('likedItems')) || {};
       if (likedItems[itemID]) {
-        alert('You have already liked this item.');
-        return;
+        likeButton.classList.add('liked');
       }
+    
+      likeButton.addEventListener('click', function() {
+        if (likedItems[itemID]) {
+         alert('You have already liked this item.');
+         return;
+        }
       
       likedItems[itemID] = true;
       localStorage.setItem('likedItems', JSON.stringify(likedItems));
