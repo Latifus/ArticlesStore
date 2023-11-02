@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -14,7 +15,6 @@ import (
 
 type Item struct {
 	ID           uint16
-	AuthorName   string
 	CreationDate string
 	Likes        int64
 	Title        string
@@ -27,10 +27,22 @@ type User struct {
 	Password string
 	Token    string
 }
+type Tag struct {
+	ID      uint16
+	Tagname string
+	Item_id uint16
+}
+type ItemWithUsername struct {
+	ID           int
+	CreationDate string
+	Likes        int
+	Title        string
+	Description  string
+	Username     string // New field to store the username
+}
 type Exception struct {
 	Message string
 }
-
 var secretKey string = "ZrStAfUuqTM6eTuhacT9JCfUQp9QkHnZ"
 
 func (u *User) setToken(token string) {
@@ -117,7 +129,8 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		IsAuthenticated bool
-		Items           []Item
+		Items           []ItemWithUsername
+		Tags            []Tag
 	}{
 		IsAuthenticated: isAuthenticated,
 	}
@@ -126,28 +139,74 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 	if errr != nil {
 		panic(errr)
 	}
-
 	defer db.Close()
 
-	res, error := db.Query("SELECT * FROM `items` ORDER BY `creationDate` DESC;")
+	query := `
+        SELECT i.id, i.creationDate, i.likes, i.title, i.description, u.username
+        FROM items i
+        JOIN users u ON i.user_id = u.id
+        ORDER BY i.creationDate DESC;
+    `
+
+	res, error := db.Query(query)
 	if error != nil {
 		panic(error)
 	}
 
-	data.Items = []Item{}
+	data.Items = []ItemWithUsername{}
 
 	for res.Next() {
-		var item Item
-		error = res.Scan(&item.ID, &item.AuthorName, &item.CreationDate, &item.Likes, &item.Title, &item.Description)
+		var item ItemWithUsername
+		error = res.Scan(&item.ID, &item.CreationDate, &item.Likes, &item.Title, &item.Description, &item.Username)
 		if error != nil {
 			panic(error)
 		}
+		item.Description = cutDescription(item.Description)
 		item.CreationDate = formatDate(item.CreationDate)
 
 		data.Items = append(data.Items, item)
 	}
 
+	tag, fail := db.Query("SELECT * FROM `tags`;")
+	if fail != nil {
+		panic(fail)
+	}
+
+	data.Tags = []Tag{}
+	for tag.Next() {
+		var t Tag
+		fail = tag.Scan(&t.ID, &t.Tagname, &t.Item_id)
+		if fail != nil {
+			panic(fail)
+		}
+		data.Tags = append(data.Tags, t)
+
+	}
 	temp.ExecuteTemplate(w, "index", data)
+}
+
+func updateLikes(w http.ResponseWriter, r *http.Request) {
+	itemID := r.FormValue("itemID")
+	likes := r.FormValue("likes")
+
+	db, err := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	_, _ = db.Exec("UPDATE items SET likes = ? WHERE id = ?", likes, itemID)
+
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func cutDescription(desc string) string {
+	words := strings.Fields(desc)
+	if 10 > len(words) {
+		return desc
+	}
+	return strings.Join(words[:10], " ") + "..."
 }
 
 func getAddItemPage(w http.ResponseWriter, r *http.Request) {
@@ -320,6 +379,16 @@ func checkUserPage(w http.ResponseWriter, r *http.Request) {
 	temp.ExecuteTemplate(w, "user", user)
 }
 
+func logout(w http.ResponseWriter, r *http.Request) {
+	cookie := &http.Cookie{
+        Name:   "token",
+        Value:  "",  
+        MaxAge: -1,   
+    }
+    http.SetCookie(w, cookie)
+    http.Redirect(w, r, "/", http.StatusSeeOther) 
+}
+
 func main() {
 	rtr := mux.NewRouter()
 	http.Handle("/", rtr)
@@ -328,9 +397,14 @@ func main() {
 	rtr.HandleFunc("/add", getAddItemPage).Methods("GET")
 	rtr.HandleFunc("/save_article", saveItem).Methods("POST")
 	rtr.HandleFunc("/register", getRegisterPage).Methods("GET")
-	rtr.HandleFunc("/save_user", register).Methods("POST")
+	rtr.HandleFunc("/", register).Methods("POST")
 	rtr.HandleFunc("/login", login).Methods("GET")
 	rtr.HandleFunc("/user", checkUserPage).Methods("GET")
+	rtr.HandleFunc("/update-likes", updateLikes).Methods("POST")
+	rtr.HandleFunc("/logout", logout).Methods("POST")
 
 	http.ListenAndServe(":8181", nil)
 }
+
+
+

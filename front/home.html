@@ -6,6 +6,108 @@
     {{ template "headerNonAuth" }}
 {{ end }}
  
+    <style>
+      
+
+/* Custom default button */
+.btn-light,
+.btn-light:hover,
+.btn-light:focus {
+  color: #333;
+  text-shadow: none; /* Prevent inheritance from `body` */
+}
+
+
+/*
+ * Base structure
+ */
+
+body {
+  text-shadow: 0 .05rem .1rem rgba(0, 0, 0, .5);
+  box-shadow: inset 0 0 5rem rgba(0, 0, 0, .5);
+}
+
+.cover-container {
+  max-width: 79em;
+}
+
+
+/*
+ * Header
+ */
+
+.nav-masthead .nav-link {
+  color: rgba(255, 255, 255, .5);
+  border-bottom: .25rem solid transparent;
+}
+
+.nav-masthead .nav-link:hover,
+.nav-masthead .nav-link:focus {
+  border-bottom-color: rgba(255, 255, 255, .25);
+}
+
+.nav-masthead .nav-link + .nav-link {
+  margin-left: 1rem;
+}
+
+.nav-masthead .active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.tags-block {
+    max-width: 270px; /* Установите желаемую максимальную ширину в пикселях */
+    margin-left: auto; /* Установите отступ слева в auto для смещения вправо */
+    text-align: left; /* Чтобы текст и элементы внутри блока были по центру */
+}
+
+.badge {
+    text-decoration: none; /* Убрать подчеркивание */
+    cursor: pointer; /* Сделать курсор указателем, чтобы указать на кликабельность */
+}
+
+.badge:hover {
+    background-color: #0056b3; /* Изменить цвет фона при наведении (если нужно) */
+    color: #fff; /* Изменить цвет текста при наведении (если нужно) */
+}
+
+#username:hover {
+  text-decoration: underline;
+}
+
+.colorful-button {
+  background-color: #007bff; /* Initial button background color */
+  color: #fff; /* Text color */
+  padding: 10px 20px; /* Adjust padding as needed */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s; /* Add a smooth transition effect */
+  animation: colorChange 3s infinite alternate; 
+
+}
+
+/* Hover effect */
+.colorful-button:hover {
+  background-color: #ff6347; /* New background color on hover */
+}
+
+/* Keyframes for animation (Optional) */
+@keyframes colorChange {
+  0% {
+    background-color: #007bff;
+  }
+  50% {
+    background-color: #ff6347;
+  }
+  100% {
+    background-color: #007bff;
+  }
+}
+
+
+
+    </style>
 
         <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
           <symbol id="check2" viewBox="0 0 16 16">
@@ -52,11 +154,25 @@
             </li>
           </ul>
         </div>
-    
-        
+
       <main class="px-3">
         <h1>global feed</h1>
         <p class="lead">Here you can find all Items<p>
+  
+          <div id="tags" class="tags-block mt-4 p-3 rounded bg-white"> 
+            <p style="color: #333;">Popular tags</p>
+             {{ range .Tags }}
+            <a id="tag_link" href="/tag/{{ .Tagname }}" class="badge bg-primary">{{ .Tagname }}</a>
+
+             {{ end }}
+          </div>
+  
+<!-- 
+            number of likes
+
+            list of tags
+
+            and a link to read the full article  -->
 
       {{ range .Items }}
       <section class="p-4 p-md-5 text-center text-lg-start shadow-1-strong rounded">
@@ -69,9 +185,19 @@
                     <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/img%20%2810%29.webp" class="rounded-circle img-fluid shadow-1" alt="woman avatar" width="200" height="200" />
                   </div>
                   <div class="col-lg-8">
-                      <p class="text-muted fw-light mb-4"></p>
-                      <p class="fw-bold lead mb-2"><strong>{{ .Title}}</strong></p>
-                      <p class="fw-bold text-muted mb-0">{{ .CreationDate }}</p>
+                      <!-- <p class="text-muted fw-light mb-4"></p> -->
+                      <a id="username" href="/user" class="fw-bold lead mb-2" style="color: #3b3939; text-decoration: none;">
+                        <strong>{{ .Username }}</strong>
+                      </a>
+                      <p class="date ng-binding" style="font-size: 14px; color: #666262">{{ .CreationDate }}</p>
+                      <h2 class="fw-bold text-muted mb-0">{{ .Title}}</h2>             
+                      <p class="fw-bold text-muted mb-0"> {{ .Description }}</p>
+
+                      <div class="button-container">
+                        <button id="likeButton" class="btn btn-sm btn-outline-primary likeButton" data-item-id="{{ .ID }}" data-likes="{{ .Likes }}"> 
+                           <i class="ion-heart"></i> <ng-transclude><span class="ng-binding ng-scope">{{ .Likes }}</span></ng-transclude> </button>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -87,8 +213,60 @@
         <p class="lead">
           <a href="#" class="btn btn-lg btn-light fw-bold border-white bg-white">Learn more</a>
         </p>
-      </main>
+
+        <script>
+       document.addEventListener('DOMContentLoaded', function() {
+  var likeButtons = document.querySelectorAll('.likeButton');
+  
+  likeButtons.forEach(function(likeButton) {
+    var itemID = likeButton.getAttribute('data-item-id');
     
+    // Проверяем, поставил ли пользователь уже лайк для этой записи
+    var likedItems = JSON.parse(localStorage.getItem('likedItems')) || {};
+    if (likedItems[itemID]) {
+      // Если пользователь уже поставил лайк, применяем стиль
+      likeButton.classList.add('liked');
+    }
+    
+    likeButton.addEventListener('click', function() {
+      if (likedItems[itemID]) {
+        alert('You have already liked this item.');
+        return;
+      }
+      
+      likedItems[itemID] = true;
+      localStorage.setItem('likedItems', JSON.stringify(likedItems));
+      
+      likeButton.classList.add('liked'); // Применяем стиль при нажатии кнопки
+      
+      var currentLikes = parseInt(likeButton.getAttribute('data-likes'));
+      currentLikes += 1;
+      likeButton.setAttribute('data-likes', currentLikes);
+      
+      fetch('/update-likes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `itemID=${itemID}&likes=${currentLikes}`,
+      })
+      .then(response => {
+        if (response.ok) {
+          likeButton.textContent = `Like (${currentLikes})`;
+        }
+      })
+      .catch(error => {
+        console.error('Ошибка:', error);
+      });
+    });
+  });
+});
+
+
+          </script>
+          
+      </main>
       {{ template "footer" }}
 
 {{ end }}
+
