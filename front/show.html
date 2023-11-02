@@ -1,4 +1,4 @@
-{{ define "index"}}
+{{ define "show"}}
 
 {{ if .IsAuthenticated }}
     {{ template "header" }}
@@ -129,20 +129,6 @@ body {
         </div>
 
       <main class="px-3">
-        <h1>global feed</h1>
-        <p class="lead">Here you can find all Items</p>
-
-          <div id="tags" class="tags-block mt-4 p-3 rounded bg-white"> 
-            <p style="color: #333;">Popular tags</p>
-             {{ range .Tags }}
-            <a id="tag_link" href="/tag/{{ .Tagname }}" class="badge bg-primary">{{ .Tagname }}</a>
-
-             {{ end }}
-          </div>
-
-            <!-- list of tags
-
-            and a link to read the full article  -->
 
       {{ range .Items }}
       <section class="p-4 p-md-5 text-center text-lg-start shadow-1-strong rounded">
@@ -157,21 +143,15 @@ body {
                   <div class="col-lg-8">
                       <!-- <p class="text-muted fw-light mb-4"></p> -->
                       <a id="username" href="/user" class="fw-bold lead mb-2" style="color: #3b3939; text-decoration: none;">
-                        <strong>{{ .Username }}</strong>
+                        <strong>{{ .Titel }}</strong>
                       </a>
                       <p class="date ng-binding" style="font-size: 14px; color: #666262">{{ .CreationDate }}</p>
-                      <h2 class="fw-bold text-muted mb-0">{{ .Title}}</h2>             
-                      <p class="fw-bold text-muted mb-0"> {{ .Description }}</p>
-
-                      
-
+                      <h2 class="fw-bold text-muted mb-0">{{ .Description}}</h2>             
+                      <p class="fw-bold text-muted mb-0"> {{ .Tagsname }}</p>
                       <div class="button-container">
                         <button id="likeButton" class="btn btn-sm btn-outline-primary likeButton" data-item-id="{{ .ID }}" data-likes="{{ .Likes }}"> 
                            <i class="ion-heart"></i> <ng-transclude><span class="ng-binding ng-scope">{{ .Likes }}</span></ng-transclude> </button>
                       </div>
-
-                      <a href="/post/{{ .ID }}" class="btn btn-danger">Read More</a>
-
                     </div>
                   </div>
                 </div>
@@ -180,64 +160,12 @@ body {
         </div>
      </section>
 
-        {{ else }}
-        <p class="lead">No arcticles</p>
         {{ end }}
 
         <p class="lead">
           <a href="#" class="btn btn-lg btn-light fw-bold border-white bg-white">Learn more</a>
         </p>
-
-        <script>
-       document.addEventListener('DOMContentLoaded', function() {
-       var likeButtons = document.querySelectorAll('.likeButton');
-  
-      likeButtons.forEach(function(likeButton) {
-      var itemID = likeButton.getAttribute('data-item-id');
     
-      // Проверяем, поставил ли пользователь уже лайк для этой записи
-      var likedItems = JSON.parse(localStorage.getItem('likedItems')) || {};
-      if (likedItems[itemID]) {
-        likeButton.classList.add('liked');
-      }
-    
-      likeButton.addEventListener('click', function() {
-        if (likedItems[itemID]) {
-         alert('You have already liked this item.');
-         return;
-        }
-      
-      likedItems[itemID] = true;
-      localStorage.setItem('likedItems', JSON.stringify(likedItems));
-      
-      likeButton.classList.add('liked'); // Применяем стиль при нажатии кнопки
-      
-      var currentLikes = parseInt(likeButton.getAttribute('data-likes'));
-      currentLikes += 1;
-      likeButton.setAttribute('data-likes', currentLikes);
-      
-      fetch('/update-likes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `itemID=${itemID}&likes=${currentLikes}`,
-      })
-      .then(response => {
-        if (response.ok) {
-          likeButton.textContent = `Like (${currentLikes})`;
-        }
-      })
-      .catch(error => {
-        console.error('Ошибка:', error);
-      });
-    });
-  });
-});
-
-
-          </script>
-          
       </main>
       {{ template "footer" }}
 

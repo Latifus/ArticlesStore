@@ -44,8 +44,12 @@ type Exception struct {
 	Message string
 }
 type ItemWithTags struct {
-	ID int
-	Tagsname string
+	ID           int
+	Likes        int
+	Tagsname     string
+	CreationDate string
+	Titel        string
+	Description  string
 }
 
 var secretKey string = "ZrStAfUuqTM6eTuhacT9JCfUQp9QkHnZ"
@@ -166,10 +170,10 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 		}
 		item.Description = cutDescription(item.Description)
 		item.CreationDate = formatDate(item.CreationDate)
-	
+
 		data.Items = append(data.Items, item)
 	}
-	
+
 	tag, fail := db.Query("SELECT * FROM `tags`;")
 	if fail != nil {
 		panic(fail)
@@ -199,7 +203,6 @@ func updateLikes(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	_, _ = db.Exec("UPDATE items SET likes = ? WHERE id = ?", likes, itemID)
-
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -248,7 +251,7 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	userID:= verifyToken(token.Value)
+	userID := verifyToken(token.Value)
 
 	title := r.FormValue("title")
 	desc := r.FormValue("desc")
@@ -258,7 +261,7 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("addded tags: ")
 	fmt.Print(tags)
 	fmt.Println()
-	fmt.Println(title + " : " + desc+ " : " +  date)
+	fmt.Println(title + " : " + desc + " : " + date)
 
 	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
 	if errr != nil {
@@ -288,8 +291,6 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
-
-
 
 func checkCriteria(criteria string) bool {
 	return criteria != ""
@@ -432,12 +433,64 @@ func checkUserPage(w http.ResponseWriter, r *http.Request) {
 
 func logout(w http.ResponseWriter, r *http.Request) {
 	cookie := &http.Cookie{
-        Name:   "token",
-        Value:  "",  
-        MaxAge: -1,   
-    }
-    http.SetCookie(w, cookie)
-    http.Redirect(w, r, "/", http.StatusSeeOther) 
+		Name:   "token",
+		Value:  "",
+		MaxAge: -1,
+	}
+	http.SetCookie(w, cookie)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func getItemPage(w http.ResponseWriter, r *http.Request) {
+	var isAuthenticated bool
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		isAuthenticated = false
+	} else {
+		token := cookie.Value
+		isAuthenticated = CheckAuthentication(token)
+	}
+
+	temp, err := template.ParseFiles("front/show.html", "front/header.html", "front/headerIfNonAuthorize.html", "front/footer.html")
+	if err != nil {
+		panic(err)
+	}
+
+	data := struct {
+		IsAuthenticated bool
+		Item            ItemWithTags
+	}{
+		IsAuthenticated: isAuthenticated,
+	}
+
+	vars := mux.Vars(r)
+
+	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
+	if errr != nil {
+		panic(errr)
+	}
+	defer db.Close()
+
+	tag, fail := db.Query(`select i.creationDate, i.likes, i.title, i.description, t.tag_name from items i
+							inner join tags t 
+							on i.id = t.item_id
+							WHERE i.id = ?;`, vars["id"])
+
+	if fail != nil {
+		panic(fail)
+	}
+
+	data.Item = ItemWithTags{}
+	for tag.Next() {
+		var t ItemWithTags
+		fail = tag.Scan(&t.CreationDate, &t.Likes, &t.Titel, &t.Description, &t.Tagsname)
+		if fail != nil {
+			panic(fail)
+		}
+		data.Item = t
+	}
+
+	temp.ExecuteTemplate(w, "show", data)
 }
 
 func main() {
@@ -453,9 +506,7 @@ func main() {
 	rtr.HandleFunc("/user", checkUserPage).Methods("GET")
 	rtr.HandleFunc("/update-likes", updateLikes).Methods("POST")
 	rtr.HandleFunc("/logout", logout).Methods("POST")
+	rtr.HandleFunc("/post/{id:[0-9]+}", getItemPage).Methods("GET")
 
 	http.ListenAndServe(":8181", nil)
 }
-
-
-
