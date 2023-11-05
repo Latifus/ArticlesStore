@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
+	"weekProjectDream/connect"
 
 	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
@@ -92,7 +92,7 @@ func checkToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Проверка метода подписи
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Invalid token signing method")
+			return nil, fmt.Println("Invalid token signing method")
 		}
 		return []byte(secretKey), nil
 	})
@@ -144,11 +144,7 @@ func getHomePage(w http.ResponseWriter, r *http.Request) {
 		IsAuthenticated: isAuthenticated,
 	}
 
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	query := `
         SELECT i.id, i.creationDate, i.likes, i.title, i.description, u.username
@@ -196,11 +192,7 @@ func updateLikes(w http.ResponseWriter, r *http.Request) {
 	itemID := r.FormValue("itemID")
 	likes := r.FormValue("likes")
 
-	db, err := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	_, _ = db.Exec("UPDATE items SET likes = ? WHERE id = ?", likes, itemID)
 
@@ -221,11 +213,7 @@ func getAddItemPage(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	db, err := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	tag, fail := db.Query("SELECT * FROM `tags`;")
 	if fail != nil {
@@ -263,11 +251,7 @@ func saveItem(w http.ResponseWriter, r *http.Request) {
 	fmt.Println()
 	fmt.Println(title + " : " + desc + " : " + date)
 
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	insert, error := db.Exec(fmt.Sprintf("INSERT INTO `items` (`creationDate`, `likes`, `title`, `description`, `user_id`) VALUES('%s', '%d', '%s', '%s', '%d')", date, 0, title, desc, userID))
 	if error != nil {
@@ -310,11 +294,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	if checkCriteria(username) && checkCriteria(email) && checkCriteria(password) {
 		insert, error := db.Query(fmt.Sprintf("INSERT INTO `users` (`username`, `email`, `password`) VALUES('%s', '%s',  '%s')", username, email, password))
@@ -335,15 +315,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	res, err := db.Query("SELECT `id`, `email`, `password` FROM `users`")
 	if err != nil {
-		panic(errr)
+		panic(err)
 	}
 
 	if checkCriteria(email) && checkCriteria(password) {
@@ -409,11 +385,7 @@ func checkUserPage(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	res, exce := db.Query(fmt.Sprintf("SELECT * FROM `users` WHERE `id` = %d", userId))
 	if err != nil {
@@ -464,12 +436,7 @@ func getItemPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-
-	db, errr := sql.Open("mysql", "root:50151832l@tcp(127.0.0.1:3306)/project_db")
-	if errr != nil {
-		panic(errr)
-	}
-	defer db.Close()
+	db := connect.DBConnection()
 
 	tag, fail := db.Query(`SELECT i.creationDate, i.likes, i.title, i.description, t.tag_name 
 							FROM items i
@@ -482,7 +449,7 @@ func getItemPage(w http.ResponseWriter, r *http.Request) {
 
 	data.Item = []ItemWithTags{}
 	for tag.Next() {
-		
+
 		var t ItemWithTags
 
 		fail = tag.Scan(&t.CreationDate, &t.Likes, &t.Titel, &t.Description, &t.Tagsname)
