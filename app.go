@@ -458,7 +458,7 @@ func getItemPage(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		IsAuthenticated bool
-		Item            ItemWithTags
+		Item            []ItemWithTags
 	}{
 		IsAuthenticated: isAuthenticated,
 	}
@@ -471,23 +471,30 @@ func getItemPage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	tag, fail := db.Query(`select i.creationDate, i.likes, i.title, i.description, t.tag_name from items i
-							inner join tags t 
-							on i.id = t.item_id
+	tag, fail := db.Query(`SELECT i.creationDate, i.likes, i.title, i.description, t.tag_name 
+							FROM items i
+							INNER JOIN tags t ON i.id = t.item_id
 							WHERE i.id = ?;`, vars["id"])
 
 	if fail != nil {
 		panic(fail)
 	}
 
-	data.Item = ItemWithTags{}
+	data.Item = []ItemWithTags{}
 	for tag.Next() {
+		
 		var t ItemWithTags
+
 		fail = tag.Scan(&t.CreationDate, &t.Likes, &t.Titel, &t.Description, &t.Tagsname)
 		if fail != nil {
 			panic(fail)
 		}
-		data.Item = t
+		fmt.Print("new item: ")
+		fmt.Print(t)
+		fmt.Println("")
+
+		data.Item = append(data.Item, t)
+
 	}
 
 	temp.ExecuteTemplate(w, "show", data)

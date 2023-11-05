@@ -1,0 +1,21 @@
+[Unit]
+Description=latifProject
+After=network.target
+
+[Service]
+ExecStart=C:\Users\User\Desktop\go\weekProjectDream\app.exe
+Restart=always
+
+# Удалим User и Group, чтобы позволить пользователю самостоятельно управлять правами
+# User=tools4u
+# Group=tools4u
+# Изменим WorkingDirectory на директорию, где находится ваше приложение
+
+WorkingDirectory=C:\Users\User\Desktop\go\weekProjectDream
+
+# Уберем пустые переменные среды
+# Environment=ADMIN_PW=
+# Environment=OPENAI_API_KEY=
+
+[Install]
+WantedBy=multi-user.target

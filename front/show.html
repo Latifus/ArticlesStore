@@ -8,7 +8,7 @@
  
     <style>
       
-
+      
 /* Custom default button */
 .btn-light,
 .btn-light:hover,
@@ -130,7 +130,7 @@ body {
 
       <main class="px-3">
 
-      {{ range .Items }}
+      {{ range .Item }}
       <section class="p-4 p-md-5 text-center text-lg-start shadow-1-strong rounded">
         <div class="row d-flex justify-content-center">
           <div class="col-md-10">
@@ -147,11 +147,7 @@ body {
                       </a>
                       <p class="date ng-binding" style="font-size: 14px; color: #666262">{{ .CreationDate }}</p>
                       <h2 class="fw-bold text-muted mb-0">{{ .Description}}</h2>             
-                      <p class="fw-bold text-muted mb-0"> {{ .Tagsname }}</p>
-                      <div class="button-container">
-                        <button id="likeButton" class="btn btn-sm btn-outline-primary likeButton" data-item-id="{{ .ID }}" data-likes="{{ .Likes }}"> 
-                           <i class="ion-heart"></i> <ng-transclude><span class="ng-binding ng-scope">{{ .Likes }}</span></ng-transclude> </button>
-                      </div>
+                      <!-- <p class="fw-bold text-muted mb-0"> {{ .Tagsname }}</p> -->
                     </div>
                   </div>
                 </div>
@@ -161,10 +157,6 @@ body {
      </section>
 
         {{ end }}
-
-        <p class="lead">
-          <a href="#" class="btn btn-lg btn-light fw-bold border-white bg-white">Learn more</a>
-        </p>
     
       </main>
       {{ template "footer" }}
