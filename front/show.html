@@ -129,7 +129,6 @@ body {
         </div>
 
       <main class="px-3">
-
       {{ range .Item }}
       <section class="p-4 p-md-5 text-center text-lg-start shadow-1-strong rounded">
         <div class="row d-flex justify-content-center">
@@ -141,11 +140,15 @@ body {
                     <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/img%20%2810%29.webp" class="rounded-circle img-fluid shadow-1" alt="woman avatar" width="200" height="200" />
                   </div>
                   <div class="col-lg-8">
+                    
                       <!-- <p class="text-muted fw-light mb-4"></p> -->
+                     
                       <a id="username" href="/user" class="fw-bold lead mb-2" style="color: #3b3939; text-decoration: none;">
                         <strong>{{ .Titel }}</strong>
                       </a>
+                    
                       <p class="date ng-binding" style="font-size: 14px; color: #666262">{{ .CreationDate }}</p>
+                     
                       <h2 class="fw-bold text-muted mb-0">{{ .Description}}</h2>             
                       <!-- <p class="fw-bold text-muted mb-0"> {{ .Tagsname }}</p> -->
                     </div>
@@ -159,6 +162,8 @@ body {
         {{ end }}
     
       </main>
+      
+       {{ end }}
       {{ template "footer" }}
 
 {{ end }}
